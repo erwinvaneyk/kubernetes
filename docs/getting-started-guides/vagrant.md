@@ -34,7 +34,7 @@ Documentation for other releases can be found at
 
 ## Getting started with Vagrant
 
-Running Kubernetes with Vagrant (and VirtualBox) is an easy way to run/test/develop on your local machine (Linux, Mac OS X).
+Running Kubernetes with Vagrant (and VirtualBox) is an easy way to run/test/develop on your local machine (e.g. Linux, Mac OS X).
 
 **Table of Contents**
 
@@ -149,7 +149,7 @@ To view the services on any of the nodes:
 
 ### Interacting with your Kubernetes cluster with Vagrant.
 
-With your Kubernetes cluster up, you can manage the nodes in your cluster with the regular Vagrant commands.
+With your Kubernetes cluster up, you can manage the nodes in your cluster with the cluster management scripts and a subset of the regular Vagrant commands (most notably excluding `vagrant up` and `vagrant suspend`).
 
 To push updates to new Kubernetes code after making source changes:
 
@@ -167,7 +167,7 @@ vagrant halt
 To destroy the cluster:
 
 ```sh
-vagrant destroy
+./cluster/kube-down.sh
 ```
 
 Once your Vagrant machines are up and provisioned, the first thing to do is to check that you can use the `kubectl.sh` script.
