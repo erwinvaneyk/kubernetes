@@ -200,7 +200,7 @@ cat ~/.kubernetes_vagrant_auth
 }
 ```
 
-You should now be set to use the `cluster/kubectl.sh` script. For example try to list the nodes that you have started with:
+You should now be able set to use the `cluster/kubectl.sh` script. For example try to list the nodes that you have started with:
 
 ```sh
 ./cluster/kubectl.sh get nodes
