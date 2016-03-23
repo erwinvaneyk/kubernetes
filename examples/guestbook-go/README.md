@@ -58,36 +58,34 @@ This example assumes that you have a working cluster. See the [Getting Started G
 
 ### Step One: Create the Redis master pod<a id="step-one"></a>
 
-Use the `examples/guestbook-go/redis-master-controller.json` file to create a [replication controller](../../docs/user-guide/replication-controller.md) and Redis master [pod](../../docs/user-guide/pods.md). The pod runs a Redis key-value server in a container. Using a replication controller is the preferred way to launch long-running pods, even for 1 replica, so that the pod benefits from the self-healing mechanism in Kubernetes (keeps the pods alive).
+Use the `examples/guestbook-go/redis-master-controller.json` file to create a [replication controller](../../docs/user-guide/replication-controller.md) and Redis master [pod](../../docs/user-guide/pods.md). The pod runs a Redis key-value server in a container. Using a replication controller is the preferred way to launch long-running pods, even for 1 replica, such that the pod benefits from the self-healing mechanism in Kubernetes (keeps the pods alive).
 
 1. Use the [redis-master-controller.json](redis-master-controller.json) file to create the Redis master replication controller in your Kubernetes cluster by running the `kubectl create -f` *`filename`* command:
 
     ```console
     $ kubectl create -f examples/guestbook-go/redis-master-controller.json
-    replicationcontrollers/redis-master
+    replicationcontroller "redis-master" created
     ```
 
-2. To verify that the redis-master controller is up, list the replication controllers you created in the cluster with the `kubectl get rc` command(if you don't specify a `--namespace`, the `default` namespace will be used. The same below):
+2. To verify that the redis-master replication controller is up, list the replication controllers you created in the cluster with the `kubectl get rc` command (if you don't specify a `--namespace`, the `default` namespace will be used. The same below):
 
     ```console
     $ kubectl get rc
     CONTROLLER             CONTAINER(S)            IMAGE(S)                    SELECTOR                         REPLICAS
-    redis-master           redis-master            gurpartap/redis             app=redis,role=master            1
+    redis-master           redis-master            redis                       app=redis,role=master            1
     ...
     ```
 
-    Result: The replication controller then creates the single Redis master pod.
-
-3. To verify that the redis-master pod is running, list the pods you created in cluster with the `kubectl get pods` command:
+3. Internally, the replication controller should have created the single Redis master pod. To verify that the redis-master pod is running, list the pods you created in cluster with the `kubectl get pods -o wide` command:
 
     ```console
-    $ kubectl get pods
-    NAME                        READY     STATUS    RESTARTS   AGE
-    redis-master-xx4uv          1/1       Running   0          1m
+    $ kubectl get pods -o wide
+    NAME                        READY     STATUS    RESTARTS   AGE    NODE
+    redis-master-xx4uv          1/1       Running   0          1m     172.17.4.99
     ...
     ```
 
-    Result: You'll see a single Redis master pod and the machine where the pod is running after the pod gets placed (may take up to thirty seconds).
+    Result: You'll see a single Redis master pod and, using the `-o wide` parameter, the machine where the pod is running after the pod gets placed. Note that the creation of the pod may take up to thirty seconds.
 
 4. To verify what containers are running in the redis-master pod, you will need to SSH into the machine and then run `docker ps`. For example in the case of a vagrant-based setup, you would use `vagrant ssh <machine-name>`:
 
@@ -95,11 +93,10 @@ Use the `examples/guestbook-go/redis-master-controller.json` file to create a [r
     me@workstation$ vagrant ssh kubernetes-minion-3
     
     me@kubernetes-minion-3:~$ sudo docker ps
-    CONTAINER ID        IMAGE                      COMMAND                CREATED             STATUS
-    d5c458dabe50        gurpartap/redis:latest     "/usr/local/bin/redi   5 minutes ago       Up 5 minutes
+    CONTAINER ID        IMAGE                      COMMAND                CREATED             STATUS          ...
+    d5c458dabe50        redis:latest     "/usr/local/bin/redi   5 minutes ago       Up 5 minutes    ...
     ...
     ```
-    
 
 ### Step Two: Create the Redis master service <a id="step-two"></a>
 
@@ -111,7 +108,7 @@ Services find the pods to load balance based on pod labels. The pod that you cre
 
     ```console
     $ kubectl create -f examples/guestbook-go/redis-master-service.json
-    services/redis-master
+    service "redis-master" created
     ```
 
 2. To verify that the redis-master service is up, list the services you created in the cluster with the `kubectl get services` command:
@@ -128,32 +125,32 @@ Services find the pods to load balance based on pod labels. The pod that you cre
 
 ### Step Three: Create the Redis slave pods <a id="step-three"></a>
 
-The Redis master we created earlier is a single pod (REPLICAS = 1), while the Redis read slaves we are creating here are 'replicated' pods. In Kubernetes, a replication controller is responsible for managing the multiple instances of a replicated pod.
+The Redis master we created earlier is a single pod (as shown in step 1.1 by `REPLICAS = 1`), while the Redis-read slaves we are creating here are 'replicated' pods. In Kubernetes, a replication controller is responsible for managing the multiple instances of a replicated pod.
 
 1. Use the file [redis-slave-controller.json](redis-slave-controller.json) to create the replication controller by running the `kubectl create -f` *`filename`* command:
 
     ```console
     $ kubectl create -f examples/guestbook-go/redis-slave-controller.json
-    replicationcontrollers/redis-slave
+    replicationcontroller "redis-slave" created
     ```
-
-2. To verify that the redis-slave controller is running, run the `kubectl get rc` command:
-
-    ```console
-    $ kubectl get rc
-    CONTROLLER              CONTAINER(S)            IMAGE(S)               SELECTOR                    REPLICAS
-    redis-master            redis-master            gurpartap/redis        app=redis,role=master       1
-    redis-slave             redis-slave             gurpartap/redis        app=redis,role=slave        2
-    ...
-    ```
-
+    
     Result: The replication controller creates and configures the Redis slave pods through the redis-master service (name:port pair, in our example that's `redis-master:6379`).
-
+    
     Example:
     The Redis slaves get started by the replication controller with the following command:
 
     ```console
     redis-server --slaveof redis-master 6379
+    ```
+
+2. To verify that the Redis-slave controller is running, run the `kubectl get rc` command:
+
+    ```console
+    $ kubectl get rc
+    CONTROLLER              CONTAINER(S)            IMAGE(S)                    SELECTOR                    REPLICAS
+    redis-master            redis-master            redis                       app=redis,role=master       1
+    redis-slave             redis-slave             kubernetes/redis-slave:v2   app=redis,role=slave        2
+    ...
     ```
 
 3. To verify that the Redis master and slaves pods are running, run the `kubectl get pods` command:
@@ -177,7 +174,7 @@ Just like the master, we want to have a service to proxy connections to the read
 
     ```console
     $ kubectl create -f examples/guestbook-go/redis-slave-service.json
-    services/redis-slave
+    service "redis-slave" created
     ```
 
 2. To verify that the redis-slave service is up, list the services you created in the cluster with the `kubectl get services` command:
@@ -202,7 +199,7 @@ This is a simple Go `net/http` ([negroni](https://github.com/codegangsta/negroni
 
     ```console
     $ kubectl create -f examples/guestbook-go/guestbook-controller.json
-    replicationcontrollers/guestbook
+    replicationcontroller "guestbook" created
     ```
 
 2. To verify that the guestbook replication controller is running, run the `kubectl get rc` command:
@@ -211,8 +208,8 @@ This is a simple Go `net/http` ([negroni](https://github.com/codegangsta/negroni
     $ kubectl get rc
     CONTROLLER            CONTAINER(S)         IMAGE(S)                    SELECTOR                  REPLICAS
     guestbook             guestbook            kubernetes/guestbook:v2     app=guestbook             3
-    redis-master          redis-master         gurpartap/redis             app=redis,role=master     1
-    redis-slave           redis-slave          gurpartap/redis             app=redis,role=slave      2
+    redis-master          redis-master         redis                       app=redis,role=master     1
+    redis-slave           redis-slave          kubernetes/redis-slave:v2   app=redis,role=slave      2
     ...
     ```
 
@@ -230,7 +227,7 @@ This is a simple Go `net/http` ([negroni](https://github.com/codegangsta/negroni
     ... 
     ```
 
-    Result: You see a single Redis master, two Redis slaves, and three guestbook pods.
+    Result: You'll see a single Redis master, two Redis slaves, and three guestbook pods.
 
 ### Step Six: Create the guestbook service <a id="step-six"></a>
 
@@ -240,6 +237,7 @@ Just like the others, we create a service to group the guestbook pods but this t
 
     ```console
     $ kubectl create -f examples/guestbook-go/guestbook-service.json
+    service "guestbook" created
     ```
 
 
@@ -286,12 +284,12 @@ Delete all the resources by running the following `kubectl delete -f` *`filename
 
 ```console
 $ kubectl delete -f examples/guestbook-go
-guestbook-controller
-guestbook
-redid-master-controller
-redis-master
-redis-slave-controller
-redis-slave
+replicationcontroller "guestbook" deleted
+service "guestbook" deleted
+replicationcontroller "redis-master" deleted
+service "redis-master" deleted
+replicationcontroller "redis-slave" deleted
+service "redis-slave" deleted
 ```
 
 Tip: To turn down your Kubernetes cluster, follow the corresponding instructions in the version of the
