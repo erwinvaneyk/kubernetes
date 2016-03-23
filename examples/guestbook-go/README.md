@@ -52,7 +52,7 @@ If you are running a cluster in Google Container Engine (GKE), instead see the [
 
 ### Step Zero: Prerequisites <a id="step-zero"></a>
 
-This example assumes that you have a working cluster. See the [Getting Started Guides](../../docs/getting-started-guides/) for details about creating a cluster.
+This example assumes that you have a working cluster. See the [Getting Started Guides](../../docs/getting-started-guides/) for details about creating a cluster. Additionally, it is assumed that you already have a local clone of the Kubernetes repository.
 
 **Tip:** View all the `kubectl` commands, including their options and descriptions in the [kubectl CLI reference](../../docs/user-guide/kubectl/kubectl.md).
 
@@ -89,17 +89,17 @@ Use the `examples/guestbook-go/redis-master-controller.json` file to create a [r
 
     Result: You'll see a single Redis master pod and the machine where the pod is running after the pod gets placed (may take up to thirty seconds).
 
-4. To verify what containers are running in the redis-master pod, you can SSH to that machine with `gcloud compute ssh --zone` *`zone_name`* *`host_name`* and then run `docker ps`:
+4. To verify what containers are running in the redis-master pod, you will need to SSH into the machine and then run `docker ps`. For example in the case of a vagrant-based setup, you would use `vagrant ssh <machine-name>`:
 
     ```console
-    me@workstation$ gcloud compute ssh --zone us-central1-b kubernetes-minion-bz1p
+    me@workstation$ vagrant ssh kubernetes-minion-3
     
     me@kubernetes-minion-3:~$ sudo docker ps
     CONTAINER ID        IMAGE                      COMMAND                CREATED             STATUS
     d5c458dabe50        gurpartap/redis:latest     "/usr/local/bin/redi   5 minutes ago       Up 5 minutes
+    ...
     ```
-
-    Note: The initial `docker pull` can take a few minutes, depending on network conditions.
+    
 
 ### Step Two: Create the Redis master service <a id="step-two"></a>
 
